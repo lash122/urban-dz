@@ -24,9 +24,9 @@ function tabProducts() {
         <button class="icon-btn" data-bulk>⬆ Importer en lot</button>
         <button class="btn small accent" data-new-product>+ Nouveau produit</button>
       </span></h2>
-    <table class="tbl"><thead><tr>
+    <div class="tbl-scroll"><table class="tbl"><thead><tr>
       <th></th><th>Nom</th><th>Prix</th><th>Stock</th><th>Catégorie</th><th>État</th><th></th>
-    </tr></thead><tbody>${rows}</tbody></table></div>`;
+    </tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
 
 function productModal(p = {}) {
@@ -144,14 +144,14 @@ function tabCategories() {
   return `<div class="card-panel">
     <h2 style="display:flex;justify-content:space-between;align-items:center">
       Catégories <button class="btn small accent" data-new-cat>+ Nouvelle</button></h2>
-    <table class="tbl"><tbody>
+    <div class="tbl-scroll"><table class="tbl"><tbody>
     ${CACHE.categories.map(c => `
       <tr><td><b>${esc(c.name_fr)}</b> — ${esc(c.name_ar)}</td>
         <td><div class="row-actions">
           <button class="icon-btn" data-edit-cat="${c.id}">Modifier</button>
           <button class="icon-btn danger" data-del-cat="${c.id}">Supprimer</button>
         </div></td></tr>`).join('')}
-    </tbody></table></div>`;
+    </tbody></table></div></div>`;
 }
 
 function categoryModal(c = {}) {
@@ -211,6 +211,8 @@ function tabZones() {
     <h2>Zones de livraison (${CACHE.zones.length} wilayas)</h2>
     <p style="color:var(--ink-soft);font-size:.85rem;margin-bottom:14px">
       Deux prix par wilaya : <b>stopdesk</b> (agence) et <b>domicile</b>.</p>
+    <div class="zone-head"><span>#</span><span>Wilaya</span><span>Stopdesk</span><span>Domicile</span><span></span></div>
+    <div class="zones-list">
     ${CACHE.zones.map((z, i) => `
       <div class="zone-row">
         <span style="color:var(--ink-soft);font-size:.8rem">${z.code}</span>
@@ -219,6 +221,7 @@ function tabZones() {
         <input data-zone-home="${i}" type="number" min="0" value="${z.home ?? z.fee ?? 0}" title="domicile">
         <span style="font-size:.72rem;color:var(--ink-soft)">DA</span>
       </div>`).join('')}
+    </div>
     <button class="btn accent small" id="zones-save" style="margin-top:12px">Enregistrer les zones</button>
   </div>`;
 }

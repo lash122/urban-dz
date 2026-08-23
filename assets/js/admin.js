@@ -233,12 +233,12 @@ function tabOrders() {
   return `<div class="card-panel"><h2 style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
       <span>Commandes (${CACHE.orders.length})</span>
       ${CACHE.orders.length ? `<button class="btn small accent" id="csv-btn">⬇ Exporter CSV</button>` : ''}
-    </div>
-  <table class="tbl"><thead><tr>
+    </h2>
+  <div class="tbl-scroll"><table class="tbl"><thead><tr>
     <th>N°</th><th>Date</th><th>Client</th><th>Zone</th><th>Total</th><th>Statut</th><th></th>
   </tr></thead><tbody>
   ${rows || '<tr><td colspan="7" style="text-align:center;color:var(--ink-soft)">Aucune commande.</td></tr>'}
-  </tbody></table></div>`;
+  </tbody></table></div></div>`;
 }
 
 /* ---------- new-order alerts: chime + notification + tab counter ---------- */
