@@ -180,6 +180,38 @@ function tabStats() {
 }
 
 /* ---------- orders ---------- */
+function csvCell(v) {
+  const s = String(v ?? '').replace(/"/g, '""').replace(/\r?\n/g, ' ');
+  return `"${s}"`;
+}
+
+function exportOrdersCsv() {
+  // BOM so Excel opens the accents and Arabic correctly; ';' separates well
+  // in FR/DZ locale spreadsheets.
+  const rows = [['Commande', 'Date', 'Client', 'Telephone', 'Wilaya', 'Type', 'Adresse', 'Produits', 'Total DA', 'Statut']];
+  CACHE.orders.forEach(o => {
+    rows.push([
+      o.id,
+      new Date(o.created_at).toLocaleString('fr-DZ'),
+      o.customer_name,
+      o.phone,
+      o.zone,
+      o.delivery_type === 'desk' ? 'Stopdesk' : 'Domicile',
+      [o.address, o.delivery_type === 'desk' ? '(stopdesk)' : ''].filter(Boolean).join(' '),
+      (o.items || []).map(it => `${it.name_fr || it.name_ar} x${it.qty}${it.size ? ` (${it.size})` : ''}`).join(' | '),
+      o.total,
+      STATUS_FR[o.status] || o.status,
+    ]);
+  });
+  const csv = '\ufeff' + rows.map(r => r.map(csvCell).join(';')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `commandes-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 function tabOrders() {
   const rows = CACHE.orders.map(o => `
     <tr>
@@ -198,7 +230,10 @@ function tabOrders() {
           ? `<button class="icon-btn danger" data-cancel="${o.id}">Annuler</button>` : ''}
       </div></td>
     </tr>`).join('');
-  return `<div class="card-panel"><h2>Commandes (${CACHE.orders.length})</h2>
+  return `<div class="card-panel"><h2 style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <span>Commandes (${CACHE.orders.length})</span>
+      ${CACHE.orders.length ? `<button class="btn small accent" id="csv-btn">⬇ Exporter CSV</button>` : ''}
+    </div>
   <table class="tbl"><thead><tr>
     <th>N°</th><th>Date</th><th>Client</th><th>Zone</th><th>Total</th><th>Statut</th><th></th>
   </tr></thead><tbody>

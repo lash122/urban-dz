@@ -423,7 +423,8 @@ function promoModal() {
 document.addEventListener('click', async e => {
   const q = s => e.target.closest(s);
   let m;
-  if ((m = q('[data-view]'))) orderModal(CACHE.orders.find(o => o.id == m.dataset.view));
+  if (q('#csv-btn')) exportOrdersCsv();
+  else if ((m = q('[data-view]'))) orderModal(CACHE.orders.find(o => o.id == m.dataset.view));
   else if ((m = q('[data-advance]'))) setStatus(+m.dataset.advance, m.dataset.next);
   else if ((m = q('[data-cancel]')))
     confirm('Annuler cette commande ? Le stock sera restauré.') && setStatus(+m.dataset.cancel, 'cancelled');
