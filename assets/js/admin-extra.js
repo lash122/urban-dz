@@ -147,7 +147,7 @@ function tabReviews() {
       <span>Avis clients — affichés sur l'accueil (${revs.length})</span>
       <span class="row-actions">
         <button class="icon-btn" data-rev-add>+ Ajouter un avis</button>
-        ${revs.length ? '<button class="btn small accent" id="rev-save">Enregistrer</button>' : ''}
+        <button class="btn small accent" id="rev-save">Enregistrer</button>
       </span></h2>
     <div id="rev-list">
       ${revs.map((r, i) => `
