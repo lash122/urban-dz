@@ -38,3 +38,28 @@ const Cart = {
   clear() { this.items = []; this.save(); },
 };
 Cart.load();
+
+/* Wishlist — saved product ids (localStorage), hearted from cards */
+const Wish = {
+  KEY: 'ud_wishlist',
+  ids: [],
+  load() {
+    try { this.ids = JSON.parse(localStorage.getItem(this.KEY)) || []; }
+    catch { this.ids = []; }
+    return this.ids;
+  },
+  save() {
+    localStorage.setItem(this.KEY, JSON.stringify(this.ids));
+    document.dispatchEvent(new CustomEvent('wish:changed'));
+  },
+  has(id) { return this.ids.includes(Number(id)); },
+  count() { return this.ids.length; },
+  toggle(id) {
+    id = Number(id);
+    const on = !this.has(id);
+    this.ids = on ? [...this.ids, id] : this.ids.filter(x => x !== id);
+    this.save();
+    return on;
+  },
+};
+Wish.load();

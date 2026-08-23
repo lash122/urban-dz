@@ -178,11 +178,37 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   renderPdp();
   loadRelated();
+  recordRecent();
+  renderRecent();
   applyI18n();
   if (window.Ads) Ads.event('ViewContent', {
     content_name: productName(PDP), content_ids: [String(PDP.id)],
     value: Number(PDP.price) || 0,
   });
 });
+
+/* P7 — recently viewed (localStorage, most recent first) */
+const RECENT_KEY = 'ud_recent';
+
+function getRecent() {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; }
+  catch { return []; }
+}
+
+function recordRecent() {
+  const ids = getRecent().filter(x => x !== PDP.id);
+  ids.unshift(PDP.id);
+  localStorage.setItem(RECENT_KEY, JSON.stringify(ids.slice(0, 10)));
+}
+
+async function renderRecent() {
+  const ids = getRecent().filter(id => id !== PDP.id).slice(0, 4);
+  if (!ids.length) return;
+  const all = await DB.listProducts();
+  const items = ids.map(id => all.find(p => p.id === id)).filter(Boolean);
+  if (!items.length) return;
+  document.getElementById('recent-wrap').style.display = '';
+  document.getElementById('recent-grid').innerHTML = items.map(cardHtml).join('');
+}
 
 document.addEventListener('lang:changed', () => location.reload());

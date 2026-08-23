@@ -290,6 +290,20 @@ function tabSettings() {
       Événements envoyés : PageView, ViewContent, AddToCart, InitiateCheckout,
       Purchase. Vide = aucun script tiers n'est chargé.</p>
 
+    <h2 style="margin-top:24px">Vérification de domaine</h2>
+    <div class="form-grid">
+      <input id="s-v-fb" placeholder="facebook-domain-verification"
+        value="${esc((CACHE.settings.verifications || {})['facebook-domain-verification'] || '')}">
+      <input id="s-v-tt" placeholder="tiktok-developers-site-verification"
+        value="${esc((CACHE.settings.verifications || {})['tiktok-developers-site-verification'] || '')}">
+      <input id="s-v-g" placeholder="google-site-verification"
+        value="${esc((CACHE.settings.verifications || {})['google-site-verification'] || '')}">
+    </div>
+    <p style="color:var(--ink-soft);font-size:.8rem;margin-top:-6px">
+      Coller uniquement la valeur du token (pas la balise entière). Google
+      détecte le tag injecté ; si Meta/TikTok ne le voient pas, utilisez leur
+      méthode DNS.</p>
+
     <h2 style="margin-top:24px">Promotion globale</h2>
     <div class="form-grid">
       <label class="radio-card"><input type="checkbox" id="s-promo-on" ${promo.active ? 'checked' : ''}> Solde active</label>
@@ -340,6 +354,13 @@ async function saveSettings() {
       tiktokPixelId: document.getElementById('s-tt-pixel').value.trim(),
     },
   }).eq('key', 'ads');
+  await T('settings').update({
+    value: {
+      'facebook-domain-verification': document.getElementById('s-v-fb').value.trim(),
+      'tiktok-developers-site-verification': document.getElementById('s-v-tt').value.trim(),
+      'google-site-verification': document.getElementById('s-v-g').value.trim(),
+    },
+  }).eq('key', 'verifications');
   await T('settings').update({
     value: {
       active: document.getElementById('s-promo-on').checked,

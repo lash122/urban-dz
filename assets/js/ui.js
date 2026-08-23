@@ -61,6 +61,7 @@ function cardHtml(p) {
   <a class="card" href="product.html?id=${p.id}">
     <div class="card-media">
       <img src="${esc(productPhoto(p))}" alt="${esc(productName(p))}" loading="lazy">
+      <button class="wish-btn${Wish.has(p.id) ? ' active' : ''}" data-wish="${p.id}" aria-label="${esc(t('nav_wishlist'))}">♥</button>
       ${p.stock <= 0 ? `<span class="card-flag" data-i18n="out_stock">${t('out_stock')}</span>`
         : (p.compare_at_price > p.price ? `<span class="card-flag sale">−${Math.round(100 - p.price / p.compare_at_price * 100)}%</span>` : '')}
       <button class="card-quick" data-add="${p.id}">${esc(t('add_cart'))}</button>
@@ -71,6 +72,26 @@ function cardHtml(p) {
     </div>
   </a>`;
 }
+
+/* wishlist hearts — stop the card link from navigating */
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-wish]');
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const on = Wish.toggle(btn.dataset.wish);
+  btn.classList.toggle('active', on);
+  toast(on ? t('added_wish') : t('removed_wish'));
+});
+document.addEventListener('wish:changed', () => {
+  const badge = document.querySelector('.wish-count');
+  if (badge) {
+    badge.textContent = Wish.count();
+    badge.classList.toggle('empty', !Wish.count());
+  }
+  document.querySelectorAll('[data-wish]').forEach(b =>
+    b.classList.toggle('active', Wish.has(b.dataset.wish)));
+});
 
 /* Quick add from a card: uses first size; product page enforces size choice */
 document.addEventListener('click', async e => {
@@ -147,6 +168,10 @@ function renderHeader(active) {
     </nav>
     <div class="header-actions">
       <button class="lang-toggle" onclick="setLang('${LANG === 'ar' ? 'fr' : 'ar'}')">${LANG === 'ar' ? 'FR' : 'ع'}</button>
+      <a class="cart-link" href="wishlist.html" aria-label="${esc(t('nav_wishlist'))}">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 21s-7.5-4.6-10-9C.5 8 2 4.5 5.5 3.7 8 3.1 10.5 4 12 6c1.5-2 4-2.9 6.5-2.3C22 4.5 23.5 8 22 12c-2.5 4.4-10 9-10 9z"/></svg>
+        <span class="wish-count cart-count${Wish.count() ? '' : ' empty'}">${Wish.count()}</span>
+      </a>
       <a class="cart-link" href="cart.html" aria-label="cart">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 7h12l-1.2 11a2 2 0 0 1-2 1.8H9.2a2 2 0 0 1-2-1.8L6 7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>
         <span class="cart-count${Cart.count() ? '' : ' empty'}">${Cart.count()}</span>
@@ -226,6 +251,20 @@ function renderSeo() {
   if (og) og.content = here;
 }
 
+/* Domain verification meta tags from the dashboard. Note: Google's crawler
+   renders JS and will see these; Meta/TikTok checkers read raw HTML, so use
+   DNS verification for those two if the tag isn't detected. */
+function renderVerifications() {
+  const v = (window.SETTINGS_CACHE || {}).verifications || {};
+  Object.entries(v).forEach(([name, token]) => {
+    if (!token || document.querySelector(`meta[name="${name}"]`)) return;
+    const m = document.createElement('meta');
+    m.name = name;
+    m.content = token;
+    document.head.appendChild(m);
+  });
+}
+
 /* Dashboard-driven bits: announcement bar, social links, exchange days */
 window.EXCHANGE_DAYS = window.EXCHANGE_DAYS || 7;
 
@@ -266,6 +305,7 @@ function renderChrome(active) {
   applyI18n();
   renderWaFab();
   renderSeo();
+  renderVerifications();
   loadStoreSettings();
   document.addEventListener('cart:changed', () => {
     const badge = document.querySelector('.cart-count');

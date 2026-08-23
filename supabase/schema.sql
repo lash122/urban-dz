@@ -78,7 +78,8 @@ insert into settings (key, value) values
   ('announce', '{"active":false,"text_fr":"","text_ar":""}'),
   ('socials', '{"instagram":"","facebook":"","tiktok":""}'),
   ('exchange_days', '7'),
-  ('ads', '{"metaPixelId":"","tiktokPixelId":""}')
+  ('ads', '{"metaPixelId":"","tiktokPixelId":""}'),
+  ('verifications', '{"facebook-domain-verification":"","tiktok-developers-site-verification":"","google-site-verification":""}')
 on conflict (key) do nothing;
 
 create table if not exists promo_codes (
@@ -368,7 +369,8 @@ create policy "read categories" on categories for select using (true);
 create policy "read active products" on products for select using (active = true);
 create policy "read public settings" on settings
   for select using (key in ('store','zones','promo','free_delivery_from','hero',
-                            'whatsapp','announce','socials','exchange_days','ads'));
+                            'whatsapp','announce','socials','exchange_days','ads',
+                            'verifications'));
 
 create policy "owner all categories" on categories
   for all using (public.is_owner()) with check (public.is_owner());
