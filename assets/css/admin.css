@@ -122,7 +122,27 @@ label.radio-card { cursor: pointer; user-select: none; }
 .bar-fill { width: 100%; background: linear-gradient(180deg, #c8a468, var(--accent)); border-radius: 7px 7px 0 0; transition: height .45s ease; }
 .bar-l { font-size: .62rem; color: var(--ink-soft); margin-top: 4px; }
 
-.stats-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 34px; }
+.stats-layout { display: grid; grid-template-columns: 1.15fr 1fr; gap: 20px; align-items: start; }
+
+/* boutique settings: separated cards instead of one wall */
+.settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 18px; }
+.settings-card h3 {
+  font-size: .8rem; text-transform: uppercase; letter-spacing: .09em;
+  color: var(--ink-soft); margin-bottom: 14px;
+}
+.field-s { margin-bottom: 12px; }
+.field-s:last-child { margin-bottom: 0; }
+.field-s label { display: block; font-size: .78rem; color: var(--ink-soft); margin-bottom: 4px; }
+.field-s input { width: 100%; border: 1px solid var(--line); border-radius: 9px; padding: 9px 12px; background: var(--bg); }
+.hint { color: var(--ink-soft); font-size: .76rem; line-height: 1.45; }
+.save-bar {
+  position: sticky; bottom: 0; z-index: 20;
+  display: flex; align-items: center; gap: 12px;
+  margin-top: 20px; padding: 13px 18px;
+  background: rgba(28, 26, 23, .96); color: #fff;
+  border-radius: 13px; box-shadow: 0 -6px 24px rgba(28,26,23,.18);
+}
+
 .rank-row {
   display: grid; grid-template-columns: minmax(90px, 1.2fr) 1fr auto auto;
   gap: 10px; align-items: center; padding-block: 7px;
@@ -209,7 +229,8 @@ label.radio-card { cursor: pointer; user-select: none; }
 @media (max-width: 700px) {
   .admin-wrap { padding: 14px 14px 60px; }
   .admin-top { margin-inline: -14px; padding: 12px 14px; flex-wrap: wrap; }
-  .form-grid, .zone-row, .stats-two-col { grid-template-columns: 1fr 1fr; }
+  .form-grid, .zone-row { grid-template-columns: 1fr 1fr; }
+  .stats-layout { grid-template-columns: 1fr; }
   .zone-head { display: none; }
   .rank-row { grid-template-columns: 1fr auto; }
   .rank-bar { display: none; }

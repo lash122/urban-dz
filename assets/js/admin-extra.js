@@ -244,80 +244,65 @@ function tabSettings() {
   const freeFrom = CACHE.settings.free_delivery_from;
   const announce = CACHE.settings.announce || {};
   const socials = CACHE.settings.socials || {};
-  return `<div class="card-panel"><h2>Boutique</h2>
-    <div class="form-grid">
-      <input id="s-name" placeholder="Nom de la boutique" value="${esc(store.name || '')}">
-      <input id="s-phone" placeholder="Téléphone / WhatsApp" value="${esc(store.phone || '')}">
-    </div>
+  const ads = CACHE.settings.ads || {};
+  const ver = CACHE.settings.verifications || {};
+  const hero = typeof CACHE.settings.hero === 'string' ? CACHE.settings.hero : '';
 
-    <h2 style="margin-top:24px">WhatsApp (bouton + partage de commande)</h2>
-    <div class="form-grid">
-      <input id="s-wa" placeholder="Ex : 213555123456 (sans +, chiffres seuls)"
-        value="${esc(typeof CACHE.settings.whatsapp === 'string' ? CACHE.settings.whatsapp : '')}">
-      <input id="s-exchange" type="number" min="1" max="90" placeholder="Délai d'échange (jours)"
-        value="${CACHE.settings.exchange_days ?? 7}">
-    </div>
+  const card = (title, body) => `
+    <div class="card-panel settings-card">
+      <h3>${title}</h3>${body}</div>`;
 
-    <h2 style="margin-top:24px">Bandeau d'annonce</h2>
-    <div class="form-grid">
-      <label class="radio-card"><input type="checkbox" id="s-ann-on" ${announce.active ? 'checked' : ''}> Afficher le bandeau</label>
-      <span></span>
-      <input id="s-ann-fr" placeholder="Texte (FR) — ex : 🔥 Soldes −20% cette semaine" value="${esc(announce.text_fr || '')}">
-      <input id="s-ann-ar" placeholder="النص (AR)" value="${esc(announce.text_ar || '')}">
-    </div>
+  return `
+  <div class="settings-grid">
 
-    <h2 style="margin-top:24px">Réseaux sociaux</h2>
-    <div class="form-grid">
-      <input id="s-insta" placeholder="URL Instagram" value="${esc(socials.instagram || '')}">
-      <input id="s-fb" placeholder="URL Facebook" value="${esc(socials.facebook || '')}">
-      <input id="s-tiktok" placeholder="URL TikTok" value="${esc(socials.tiktok || '')}">
-      <span></span>
-    </div>
+    ${card('Identité', `
+      <div class="field-s"><label>Nom de la boutique</label><input id="s-name" value="${esc(store.name || '')}"></div>
+      <div class="field-s"><label>Téléphone boutique</label><input id="s-phone" value="${esc(store.phone || '')}"></div>
+      <div class="field-s"><label>Délai d'échange (jours)</label><input id="s-exchange" type="number" min="1" max="90" value="${CACHE.settings.exchange_days ?? 7}"></div>`)
 
-    <h2 style="margin-top:24px">Image d'accueil (héros)</h2>
-    <div class="form-grid">
-      <label class="icon-btn" style="cursor:pointer;justify-self:start">＋ Fichier
-        <input id="s-hero-file" type="file" accept="image/*" hidden>
-      </label>
-      <input id="s-hero" placeholder="…ou URL de l'image (vide = visuel généré)"
-        value="${esc(typeof CACHE.settings.hero === 'string' ? CACHE.settings.hero : '')}">
-      ${CACHE.settings.hero
-        ? `<img src="${esc(CACHE.settings.hero)}" alt="" id="s-hero-preview" style="width:120px;border-radius:8px;grid-column:1/-1">` : ''}
-    </div>
+    + card('WhatsApp', `
+      <div class="field-s"><label>Numéro (international, sans +)</label><input id="s-wa" placeholder="213555123456"
+        value="${esc(typeof CACHE.settings.whatsapp === 'string' ? CACHE.settings.whatsapp : '')}"></div>
+      <p class="hint">Utilisé par le bouton flottant et le partage de commande.</p>`)
 
-    <h2 style="margin-top:24px">Pixels publicitaires</h2>
-    <div class="form-grid">
-      <input id="s-meta-pixel" placeholder="Meta Pixel ID (15-16 chiffres)"
-        value="${esc((CACHE.settings.ads || {}).metaPixelId || '')}">
-      <input id="s-tt-pixel" placeholder="TikTok Pixel ID (commence par C)"
-        value="${esc((CACHE.settings.ads || {}).tiktokPixelId || '')}">
-    </div>
-    <p style="color:var(--ink-soft);font-size:.8rem;margin-top:-6px">
-      Événements envoyés : PageView, ViewContent, AddToCart, InitiateCheckout,
-      Purchase. Vide = aucun script tiers n'est chargé.</p>
+    + card('Bandeau d\'annonce', `
+      <label class="radio-card" style="margin-bottom:10px"><input type="checkbox" id="s-ann-on" ${announce.active ? 'checked' : ''}> Afficher le bandeau</label>
+      <div class="field-s"><label>Texte FR</label><input id="s-ann-fr" placeholder="🔥 Soldes −20% cette semaine" value="${esc(announce.text_fr || '')}"></div>
+      <div class="field-s"><label>النص AR</label><input id="s-ann-ar" dir="rtl" value="${esc(announce.text_ar || '')}"></div>`)
 
-    <h2 style="margin-top:24px">Vérification de domaine</h2>
-    <div class="form-grid">
-      <input id="s-v-fb" placeholder="facebook-domain-verification"
-        value="${esc((CACHE.settings.verifications || {})['facebook-domain-verification'] || '')}">
-      <input id="s-v-tt" placeholder="tiktok-developers-site-verification"
-        value="${esc((CACHE.settings.verifications || {})['tiktok-developers-site-verification'] || '')}">
-      <input id="s-v-g" placeholder="google-site-verification"
-        value="${esc((CACHE.settings.verifications || {})['google-site-verification'] || '')}">
-    </div>
-    <p style="color:var(--ink-soft);font-size:.8rem;margin-top:-6px">
-      Coller uniquement la valeur du token (pas la balise entière). Google
-      détecte le tag injecté ; si Meta/TikTok ne le voient pas, utilisez leur
-      méthode DNS.</p>
+    + card('Réseaux sociaux', `
+      <div class="field-s"><label>Instagram</label><input id="s-insta" placeholder="https://instagram.com/…" value="${esc(socials.instagram || '')}"></div>
+      <div class="field-s"><label>Facebook</label><input id="s-fb" value="${esc(socials.facebook || '')}"></div>
+      <div class="field-s"><label>TikTok</label><input id="s-tiktok" value="${esc(socials.tiktok || '')}"></div>`)
 
-    <h2 style="margin-top:24px">Promotion globale</h2>
-    <div class="form-grid">
-      <label class="radio-card"><input type="checkbox" id="s-promo-on" ${promo.active ? 'checked' : ''}> Solde active</label>
-      <input id="s-promo-pct" type="number" min="0" max="90" placeholder="% de remise" value="${promo.percent ?? 0}">
-      <input id="s-free" type="number" min="0" placeholder="Livraison gratuite à partir de (DA, vide = jamais)"
-        value="${freeFrom == null ? '' : freeFrom}">
-    </div>
-    <button class="btn accent small" id="settings-save" style="margin-top:14px">Enregistrer</button>
+    + card('Promotion globale', `
+      <label class="radio-card" style="margin-bottom:10px"><input type="checkbox" id="s-promo-on" ${promo.active ? 'checked' : ''}> Solde active sur tout le magasin</label>
+      <div class="field-s"><label>Remise (%)</label><input id="s-promo-pct" type="number" min="0" max="90" value="${promo.percent ?? 0}"></div>
+      <div class="field-s"><label>Livraison gratuite à partir de (DA)</label><input id="s-free" type="number" min="0" placeholder="vide = jamais" value="${freeFrom == null ? '' : freeFrom}"></div>`)
+
+    + card('Image d\'accueil (héros)', `
+      ${hero ? `<img src="${esc(hero)}" alt="" style="width:100%;max-height:130px;object-fit:cover;border-radius:9px;margin-bottom:10px">` : ''}
+      <div class="field-s"><label>URL ou fichier</label>
+        <div style="display:flex;gap:8px">
+          <input id="s-hero" placeholder="URL… (vide = visuel généré)" value="${esc(hero)}">
+          <label class="icon-btn" style="cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center">＋<input id="s-hero-file" type="file" accept="image/*" hidden></label>
+        </div></div>`)
+
+    + card('Publicité & vérification', `
+      <div class="field-s"><label>Meta Pixel ID</label><input id="s-meta-pixel" placeholder="15-16 chiffres" value="${esc(ads.metaPixelId || '')}"></div>
+      <div class="field-s"><label>TikTok Pixel ID</label><input id="s-tt-pixel" placeholder="commence par C" value="${esc(ads.tiktokPixelId || '')}"></div>
+      <details style="margin-top:6px">
+        <summary style="cursor:pointer;color:var(--ink-soft);font-size:.85rem">Tokens de vérification de domaine</summary>
+        <div class="field-s" style="margin-top:8px"><label>facebook-domain-verification</label><input id="s-v-fb" value="${esc(ver['facebook-domain-verification'] || '')}"></div>
+        <div class="field-s"><label>tiktok-developers-site-verification</label><input id="s-v-tt" value="${esc(ver['tiktok-developers-site-verification'] || '')}"></div>
+        <div class="field-s"><label>google-site-verification</label><input id="s-v-g" value="${esc(ver['google-site-verification'] || '')}"></div>
+        <p class="hint">Google détecte le tag injecté ; pour Meta/TikTok préférez la méthode DNS.</p>
+      </details>`)
+  }
+
+  <div class="save-bar">
+    <button class="btn accent" id="settings-save">Enregistrer les modifications</button>
+    <span class="hint" style="margin-inline-start:auto">Tout est appliqué au site en direct après enregistrement.</span>
   </div>`;
 }
 
