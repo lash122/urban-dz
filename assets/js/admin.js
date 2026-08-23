@@ -99,19 +99,84 @@ async function setStatus(id, status) {
 
 /* ---------- stats ---------- */
 function tabStats() {
-  const os = CACHE.orders.filter(o => o.status !== 'cancelled');
-  const revenue = os.reduce((s, o) => s + Number(o.total), 0);
-  const byStatus = {};
-  CACHE.orders.forEach(o => { byStatus[o.status] = (byStatus[o.status] || 0) + 1; });
+  const valid = CACHE.orders.filter(o => o.status !== 'cancelled');
+  const revenue = valid.reduce((s, o) => s + Number(o.total), 0);
+
+  // best sellers — by quantity sold
+  const byProduct = {};
+  valid.forEach(o => (o.items || []).forEach(it => {
+    const id = it.product_id;
+    if (!byProduct[id]) byProduct[id] = { name: it.name_fr || it.name_ar || `#${id}`, qty: 0, rev: 0 };
+    byProduct[id].qty += Number(it.qty) || 0;
+    byProduct[id].rev += (Number(it.price) || 0) * (Number(it.qty) || 0);
+  }));
+  const best = Object.values(byProduct).sort((a, b) => b.qty - a.qty).slice(0, 5);
+  const bestMax = Math.max(1, ...best.map(b => b.qty));
+
+  // revenue per day — last 14 days
+  const days = [];
+  const today = new Date();
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    days.push(d.toISOString().slice(0, 10));
+  }
+  const byDay = {};
+  valid.forEach(o => {
+    const d = String(o.created_at).slice(0, 10);
+    byDay[d] = (byDay[d] || 0) + Number(o.total);
+  });
+  const dayMax = Math.max(1, ...days.map(d => byDay[d] || 0));
+
+  // top wilayas
+  const byZone = {};
+  valid.forEach(o => {
+    if (!byZone[o.zone]) byZone[o.zone] = { n: 0, rev: 0 };
+    byZone[o.zone].n += 1;
+    byZone[o.zone].rev += Number(o.total);
+  });
+  const zones = Object.entries(byZone).sort((a, b) => b[1].rev - a[1].rev).slice(0, 5);
+  const zoneMax = Math.max(1, ...zones.map(z => z[1].rev));
+
   return `<div class="card-panel"><h2>Statistiques</h2>
     <div class="stat-grid">
       <div class="stat-card"><div class="v">${CACHE.orders.length}</div><div class="k">Commandes</div></div>
-      <div class="stat-card"><div class="v">${os.length}</div><div class="k">Valides</div></div>
+      <div class="stat-card"><div class="v">${valid.length}</div><div class="k">Valides</div></div>
       <div class="stat-card"><div class="v">${money(revenue)}</div><div class="k">Chiffre (COD)</div></div>
       <div class="stat-card"><div class="v">${CACHE.products.length}</div><div class="k">Produits</div></div>
-      ${Object.entries(byStatus).map(([s, n]) =>
-        `<div class="stat-card"><div class="v">${n}</div><div class="k">${STATUS_FR[s] || s}</div></div>`).join('')}
-    </div></div>`;
+      <div class="stat-card"><div class="v">${valid.filter(o => o.status === 'new').length}</div><div class="k">À confirmer</div></div>
+    </div>
+
+    <h2 style="margin-top:26px">Chiffre des 14 derniers jours</h2>
+    <div class="bars">
+      ${days.map(d => `
+        <div class="bar-col" title="${d} : ${money(byDay[d] || 0)}">
+          <span class="bar-v">${byDay[d] ? Math.round(byDay[d] / 1000) + 'k' : ''}</span>
+          <div class="bar-track"><div class="bar-fill" style="height:${Math.round((byDay[d] || 0) / dayMax * 100)}%"></div></div>
+          <span class="bar-l">${d.slice(8)}</span>
+        </div>`).join('')}
+    </div>
+
+    <div class="stats-two-col">
+      <div>
+        <h2 style="margin-top:26px">Meilleures ventes</h2>
+        ${best.length ? best.map(b => `
+          <div class="rank-row">
+            <span class="rank-name">${esc(b.name)}</span>
+            <div class="rank-bar"><div class="bar-fill h" style="width:${Math.round(b.qty / bestMax * 100)}%"></div></div>
+            <b>${b.qty}</b><small>${money(b.rev)}</small>
+          </div>`).join('') : '<p style="color:var(--ink-soft)">Pas encore de ventes.</p>'}
+      </div>
+      <div>
+        <h2 style="margin-top:26px">Top wilayas</h2>
+        ${zones.length ? zones.map(([name, z]) => `
+          <div class="rank-row">
+            <span class="rank-name">${esc(name)}</span>
+            <div class="rank-bar"><div class="bar-fill h" style="width:${Math.round(z.rev / zoneMax * 100)}%"></div></div>
+            <b>${z.n}</b><small>${money(z.rev)}</small>
+          </div>`).join('') : '<p style="color:var(--ink-soft)">Pas encore de commandes.</p>'}
+      </div>
+    </div>
+  </div>`;
 }
 
 /* ---------- orders ---------- */
