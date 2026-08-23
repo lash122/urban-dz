@@ -37,7 +37,8 @@ function renderLogin() {
 function renderShell() {
   const tabs = [
     ['stats', 'Statistiques'], ['orders', 'Commandes'], ['products', 'Produits'],
-    ['categories', 'Catégories'], ['zones', 'Zones'], ['settings', 'Boutique'], ['promos', 'Codes promo'],
+    ['categories', 'Catégories'], ['reviews', 'Avis'], ['zones', 'Zones'],
+    ['settings', 'Boutique'], ['promos', 'Codes promo'],
   ];
   root.innerHTML = `
   <div class="admin-top">
@@ -62,7 +63,8 @@ function renderShell() {
   const body = document.getElementById('tab-body');
   const views = {
     stats: tabStats, orders: tabOrders, products: tabProducts,
-    categories: tabCategories, zones: tabZones, settings: tabSettings, promos: tabPromos,
+    categories: tabCategories, reviews: tabReviews, zones: tabZones,
+    settings: tabSettings, promos: tabPromos,
   };
   const out = views[TAB]();
   if (out instanceof Promise) out.then(html => { body.innerHTML = html; });

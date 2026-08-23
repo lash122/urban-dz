@@ -71,13 +71,38 @@ function renderPdp() {
   </div>`;
 
   // interactions
-  root.querySelectorAll('[data-thumb]').forEach(img => {
-    img.addEventListener('click', () => {
-      document.getElementById('gal-main').src = img.src;
-      root.querySelectorAll('[data-thumb]').forEach(x => x.classList.remove('active'));
-      img.classList.add('active');
-    });
+  const galMain = document.getElementById('gal-main');
+  const galBox = root.querySelector('.gallery-main');
+  let curIdx = 0;
+  function showPhoto(i) {
+    curIdx = (i + photos.length) % photos.length;
+    galMain.src = photos[curIdx];
+    root.querySelectorAll('[data-thumb]').forEach(x => x.classList.remove('active'));
+    const th = root.querySelectorAll('[data-thumb]')[curIdx];
+    if (th) th.classList.add('active');
+  }
+  root.querySelectorAll('[data-thumb]').forEach((img, i) => {
+    img.addEventListener('click', () => showPhoto(i));
   });
+  /* swipe between photos (mobile) */
+  let touchX = null;
+  galBox.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; }, { passive: true });
+  galBox.addEventListener('touchend', e => {
+    if (touchX == null) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 42) showPhoto(curIdx + (dx < 0 ? 1 : -1));
+    touchX = null;
+  }, { passive: true });
+  /* hover zoom follows the cursor (desktop) */
+  if (matchMedia('(hover: hover)').matches) {
+    galBox.classList.add('zoomable');
+    galBox.addEventListener('mousemove', e => {
+      const r = galBox.getBoundingClientRect();
+      galMain.style.transformOrigin =
+        `${(e.clientX - r.left) / r.width * 100}% ${(e.clientY - r.top) / r.height * 100}%`;
+    });
+    galBox.addEventListener('mouseleave', () => { galMain.style.transformOrigin = 'center'; });
+  }
   root.querySelectorAll('[data-color]').forEach(b => {
     if (b.classList.contains('active')) chosenColor = b.dataset.color;
     b.addEventListener('click', () => {
@@ -131,6 +156,21 @@ function renderPdp() {
 
   const sgBtn = document.getElementById('btn-sizeguide');
   if (sgBtn) sgBtn.onclick = openSizeGuide;
+
+  /* sticky add-to-cart bar: appears when the main button scrolls out of view */
+  const bar = document.createElement('div');
+  bar.className = 'pdp-stickybar';
+  bar.innerHTML = `
+    <div class="sb-info">
+      <div class="sb-name">${esc(productName(p))}${chosenSize ? ` · ${chosenSize}` : ''}</div>
+      <div class="sb-price">${money(p.price)}</div>
+    </div>
+    <button class="btn accent" id="sb-add" ${soldOut ? 'disabled' : ''}>${soldOut ? t('out_stock') : t('add_cart')}</button>`;
+  document.body.appendChild(bar);
+  new IntersectionObserver(entries => {
+    entries.forEach(en => bar.classList.toggle('show', !en.isIntersecting));
+  }).observe(document.getElementById('btn-add'));
+  bar.querySelector('#sb-add').onclick = () => { addToCart(); };
 }
 
 function openSizeGuide() {

@@ -97,6 +97,9 @@ function cardHtml(p) {
     <div class="card-media">
       <img src="${esc(productPhoto(p))}" alt="${esc(productName(p))}" loading="lazy">
       <button class="wish-btn${Wish.has(p.id) ? ' active' : ''}" data-wish="${p.id}" aria-label="${esc(t('nav_wishlist'))}">♥</button>
+      <button class="qv-btn" data-qv="${p.id}" aria-label="${esc(t('qv_title'))}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      </button>
       ${p.stock <= 0 ? `<span class="card-flag" data-i18n="out_stock">${t('out_stock')}</span>`
         : (p.compare_at_price > p.price ? `<span class="card-flag sale">−${Math.round(100 - p.price / p.compare_at_price * 100)}%</span>` : '')}
       <button class="card-quick" data-add="${p.id}">${esc(t('add_cart'))}</button>
@@ -203,6 +206,7 @@ function renderHeader(active) {
     </nav>
     <div class="header-actions">
       <button class="lang-toggle" onclick="setLang('${LANG === 'ar' ? 'fr' : 'ar'}')">${LANG === 'ar' ? 'FR' : 'ع'}</button>
+      <button class="theme-btn" id="theme-btn" aria-label="theme">🌙</button>
       <a class="cart-link" href="wishlist.html" aria-label="${esc(t('nav_wishlist'))}">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 21s-7.5-4.6-10-9C.5 8 2 4.5 5.5 3.7 8 3.1 10.5 4 12 6c1.5-2 4-2.9 6.5-2.3C22 4.5 23.5 8 22 12c-2.5 4.4-10 9-10 9z"/></svg>
         <span class="wish-count cart-count${Wish.count() ? '' : ' empty'}">${Wish.count()}</span>
@@ -216,7 +220,142 @@ function renderHeader(active) {
   const burger = el.querySelector('.nav-burger');
   if (burger) burger.addEventListener('click', () =>
     el.querySelector('.nav-links').classList.toggle('open'));
+  const themeBtn = el.querySelector('#theme-btn');
+  if (themeBtn) themeBtn.addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem('ud_theme', next);
+    themeBtn.textContent = next === 'dark' ? '☀️' : '🌙';
+  });
 }
+
+/* dark mode: saved choice wins, else system preference */
+function applyTheme() {
+  let t = localStorage.getItem('ud_theme');
+  if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  document.documentElement.dataset.theme = t;
+  const b = document.getElementById('theme-btn');
+  if (b) b.textContent = t === 'dark' ? '☀️' : '🌙';
+}
+
+/* mobile bottom navigation */
+const BN_ICONS = {
+  home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>',
+  shop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 7h12l-1.2 12a2 2 0 0 1-2 1.7H9.2a2 2 0 0 1-2-1.7L6 7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>',
+  fav: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7.5-4.6-10-9C.5 8 2 4.5 5.5 3.7 8 3.1 10.5 4 12 6c1.5-2 4-2.9 6.5-2.3C22 4.5 23.5 8 22 12c-2.5 4.4-10 9-10 9z"/></svg>',
+  cart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="20" r="1.6"/><circle cx="17" cy="20" r="1.6"/><path d="M3 4h2l2.6 11h10.2L20 8H7"/></svg>',
+  track: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-6-5.2-6-10a6 6 0 1 1 12 0c0 4.8-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/></svg>',
+};
+
+function renderBottomNav(active) {
+  if (document.getElementById('bottom-nav')) return;
+  const nav = document.createElement('nav');
+  nav.id = 'bottom-nav';
+  nav.className = 'bottom-nav';
+  const items = [
+    ['home', 'index.html', 'bn_home'],
+    ['shop', 'shop.html', 'bn_shop'],
+    ['fav', 'wishlist.html', 'bn_fav'],
+    ['cart', 'cart.html', 'bn_cart'],
+    ['track', 'track.html', 'bn_track'],
+  ];
+  nav.innerHTML = items.map(([id, href, label]) => `
+    <a class="bn-item${active === id ? ' on' : ''}" href="${href}">
+      ${BN_ICONS[id]}
+      <span>${t(label)}</span>
+      ${id === 'fav' && Wish.count() ? `<span class="cart-count">${Wish.count()}</span>` : ''}
+      ${id === 'cart' && Cart.count() ? `<span class="cart-count">${Cart.count()}</span>` : ''}
+    </a>`).join('');
+  document.body.appendChild(nav);
+}
+
+/* sale countdown strip (dashboard: active promo + optional end date) */
+let _saleTimer = null;
+function renderSaleStrip() {
+  const old = document.getElementById('sale-strip');
+  if (old) old.remove();
+  if (_saleTimer) { clearInterval(_saleTimer); _saleTimer = null; }
+  const pr = (window.SETTINGS_CACHE || {}).promo || {};
+  if (!pr.active || !(Number(pr.percent) > 0)) return;
+  const el = document.createElement('div');
+  el.id = 'sale-strip';
+  el.className = 'announce-bar sale-strip';
+  const tick = () => {
+    let txt = `${t('sale_live')} : −${pr.percent}%`;
+    if (pr.ends) {
+      const ms = new Date(pr.ends) - Date.now();
+      if (ms <= 0) { el.remove(); clearInterval(_saleTimer); _saleTimer = null; return; }
+      const j = Math.floor(ms / 86400000), h = Math.floor(ms % 86400000 / 3600000),
+            m = Math.floor(ms % 3600000 / 60000);
+      txt += ` · ${j}j ${h}h ${m}m`;
+    }
+    el.textContent = txt;
+  };
+  tick();
+  if (pr.ends) _saleTimer = setInterval(tick, 30000);
+  const hdr = document.getElementById('site-header');
+  hdr.insertAdjacentElement('afterend', el);
+}
+
+/* quick view modal from product cards */
+async function quickView(id) {
+  try {
+    const p = await DB.getProduct(id);
+    if (!p) return;
+    const photos = (p.photos || []).filter(Boolean);
+    const src = photos[0] || productPhoto(p);
+    const sizes = p.sizes && p.sizes.length ? p.sizes : [];
+    const colors = p.colors && p.colors.length ? p.colors : [];
+    let size = sizes.includes('L') ? 'L' : '';
+    let color = colors[0] || '';
+    const el = document.createElement('div');
+    el.className = 'modal-bg';
+    el.innerHTML = `<div class="modal" style="max-width:420px">
+      <img src="${esc(src)}" alt="" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px">
+      <h3 style="margin-top:14px;font-size:1.05rem">${esc(productName(p))}</h3>
+      <div class="price" style="margin-block:6px 12px">${priceHtml(p)}</div>
+      ${colors.length ? `<div class="size-row" id="qv-colors">
+        ${colors.map(c => `<button type="button" class="swatch${c === color ? ' active' : ''}" data-c="${esc(c)}"
+          style="background:${colorHex(c)}" title="${esc(colorName(c))}" aria-label="${esc(colorName(c))}"></button>`).join('')}
+      </div>` : ''}
+      ${sizes.length ? `<div class="size-row" id="qv-sizes">
+        ${sizes.map(sz => `<button type="button" class="size-btn${sz === size ? ' active' : ''}" data-s="${esc(sz)}">${esc(sz)}</button>`).join('')}
+      </div>` : ''}
+      <div class="row-actions" style="margin-top:16px">
+        <button class="btn accent" id="qv-add" style="flex:1">${esc(t('add_cart'))}</button>
+        <a class="btn ghost" href="product.html?id=${p.id}">${esc(t('view_product'))}</a>
+      </div>
+    </div>`;
+    document.body.appendChild(el);
+    el.addEventListener('click', e => { if (e.target === el) el.remove(); });
+    el.querySelectorAll('#qv-colors .swatch').forEach(b => b.onclick = () => {
+      color = b.dataset.c;
+      el.querySelectorAll('#qv-colors .swatch').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+    });
+    el.querySelectorAll('#qv-sizes .size-btn').forEach(b => b.onclick = () => {
+      size = b.dataset.s;
+      el.querySelectorAll('#qv-sizes .size-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+    });
+    el.querySelector('#qv-add').onclick = () => {
+      Cart.add(p, size, color, 1);
+      toast(t('added'));
+      if (window.Ads) Ads.event('AddToCart', {
+        content_name: productName(p), content_ids: [String(p.id)], value: Number(p.price) || 0,
+      });
+      el.remove();
+    };
+  } catch { /* ignore */ }
+}
+
+document.addEventListener('click', e => {
+  const qv = e.target.closest('[data-qv]');
+  if (!qv) return;
+  e.preventDefault();
+  e.stopPropagation();
+  quickView(+qv.dataset.qv);
+});
 
 function renderFooter() {
   const el = document.getElementById('site-footer');
@@ -334,16 +473,22 @@ async function loadStoreSettings() {
   renderWaFab();
   renderAnnounce();
   renderSocials();
+  renderSaleStrip();
+  applyI18n();
+  renderAnnounce();
+  renderSocials();
   applyI18n();
 }
 
 function renderChrome(active) {
+  applyTheme();
   renderHeader(active);
   renderFooter();
   applyI18n();
   renderWaFab();
   renderSeo();
   renderVerifications();
+  renderBottomNav(active);
   loadStoreSettings();
   document.addEventListener('cart:changed', () => {
     const badge = document.querySelector('.cart-count');

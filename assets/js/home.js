@@ -5,9 +5,24 @@ async function initHome() {
   const heroImg = document.getElementById('hero-img');
   if (heroImg) {
     let hero = '';
-    try { hero = (await DB.getSettings()).hero || ''; } catch { /* demo fallback below */ }
+    let reviews = [];
+    try {
+      const st = await DB.getSettings();
+      hero = st.hero || '';
+      reviews = Array.isArray(st.reviews) ? st.reviews : [];
+    } catch { /* demo fallback below */ }
     heroImg.src = hero || window.HERO_IMAGE
       || placeholder(LANG === 'ar' ? 'تشكيلة جديدة' : 'NOUVELLE COLLECTION', 38);
+    if (reviews.length) {
+      document.getElementById('reviews-wrap').style.display = '';
+      document.getElementById('reviews-grid').innerHTML = reviews.slice(0, 6).map(r => `
+        <div class="review-card">
+          <div class="review-stars">${'★'.repeat(Math.min(5, Math.max(1, Number(r.stars) || 5)))}</div>
+          <p class="review-text" dir="auto">${esc(LANG === 'ar' ? (r.text_ar || r.text_fr) : (r.text_fr || r.text_ar))}</p>
+          <div class="review-meta"><b>${esc(r.name || '')}</b>${r.zone ? ` — ${esc(r.zone)}` : ''}
+            · ${esc(t('verified_buyer'))}</div>
+        </div>`).join('');
+    }
   }
 
   document.getElementById('feat-grid').innerHTML =

@@ -77,6 +77,7 @@ const DEMO_SETTINGS = {
     'tiktok-developers-site-verification': '',
     'google-site-verification': '',
   },
+  reviews: [],
 };
 
 function demoOrders() {
@@ -152,7 +153,7 @@ const DB = (() => {
   async function getSettings() {
     if (!live()) return JSON.parse(JSON.stringify(DEMO_SETTINGS));
     const rows = await Promise.all(['store', 'zones', 'promo', 'free_delivery_from',
-      'hero', 'whatsapp', 'announce', 'socials', 'exchange_days', 'ads', 'verifications']
+      'hero', 'whatsapp', 'announce', 'socials', 'exchange_days', 'ads', 'verifications', 'reviews']
       .map(k => client.from('settings').select('key,value').eq('key', k).maybeSingle()));
     const out = {};
     rows.forEach(r => { if (r.data) out[r.data.key] = r.data.value; });
@@ -167,6 +168,7 @@ const DB = (() => {
     out.exchange_days = Number(out.exchange_days) || 7;
     out.ads = out.ads && typeof out.ads === 'object'
       ? out.ads : { metaPixelId: '', tiktokPixelId: '' };
+    out.reviews = Array.isArray(out.reviews) ? out.reviews : [];
     out.verifications = out.verifications && typeof out.verifications === 'object'
       ? out.verifications
       : { 'facebook-domain-verification': '', 'tiktok-developers-site-verification': '', 'google-site-verification': '' };

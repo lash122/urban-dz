@@ -24,7 +24,7 @@ async function renderWishlist() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  renderChrome('');
+  renderChrome('fav');
   renderWishlist();
   document.addEventListener('wish:changed', renderWishlist);
 });

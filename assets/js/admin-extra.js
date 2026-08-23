@@ -139,6 +139,69 @@ function productModal(p = {}) {
   };
 }
 
+/* ---------- reviews (testimonials) ---------- */
+function tabReviews() {
+  const revs = Array.isArray(CACHE.settings.reviews) ? CACHE.settings.reviews : [];
+  return `<div class="card-panel">
+    <h2 style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <span>Avis clients — affichés sur l'accueil (${revs.length})</span>
+      <span class="row-actions">
+        <button class="icon-btn" data-rev-add>+ Ajouter un avis</button>
+        ${revs.length ? '<button class="btn small accent" id="rev-save">Enregistrer</button>' : ''}
+      </span></h2>
+    <div id="rev-list">
+      ${revs.map((r, i) => `
+      <div class="rev-card" data-i="${i}">
+        <div class="form-grid">
+          <input data-rf="name" placeholder="Nom du client" value="${esc(r.name || '')}">
+          <input data-rf="zone" placeholder="Wilaya (ex : Alger)" value="${esc(r.zone || '')}">
+          <select data-rf="stars">
+            ${[5,4,3,2,1].map(n => `<option value="${n}" ${(r.stars || 5) == n ? 'selected' : ''}>${'★'.repeat(n)}</option>`).join('')}
+          </select>
+          <button class="icon-btn danger" data-rev-del="${i}">Retirer</button>
+          <textarea data-rf="text_fr" rows="2" placeholder="Avis (FR)">${esc(r.text_fr || '')}</textarea>
+          <textarea data-rf="text_ar" rows="2" dir="rtl" placeholder="الرأي (AR)">${esc(r.text_ar || '')}</textarea>
+        </div>
+      </div>`).join('') || '<p style="color:var(--ink-soft)">Aucun avis. Ajoutez les retours de vos premiers clients — le meilleur argument de vente.</p>'}
+    </div>
+  </div>`;
+}
+
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-rev-add]')) {
+    const list = document.getElementById('rev-list');
+    const i = list.querySelectorAll('.rev-card').length;
+    const div = document.createElement('div');
+    div.className = 'rev-card';
+    div.dataset.i = i;
+    div.innerHTML = `<div class="form-grid">
+      <input data-rf="name" placeholder="Nom du client">
+      <input data-rf="zone" placeholder="Wilaya">
+      <select data-rf="stars">${[5,4,3,2,1].map(n => `<option value="${n}" ${n === 5 ? 'selected' : ''}>${'★'.repeat(n)}</option>`).join('')}</select>
+      <button class="icon-btn danger" data-rev-del>Retirer</button>
+      <textarea data-rf="text_fr" rows="2" placeholder="Avis (FR)"></textarea>
+      <textarea data-rf="text_ar" rows="2" dir="rtl" placeholder="الرأي (AR)"></textarea>
+    </div>`;
+    list.appendChild(div);
+  }
+  const del = e.target.closest('[data-rev-del]');
+  if (del) del.closest('.rev-card').remove();
+  if (e.target.closest('#rev-save')) {
+    const reviews = [...document.querySelectorAll('#rev-list .rev-card')].map(card => ({
+      name: card.querySelector('[data-rf="name"]').value.trim(),
+      zone: card.querySelector('[data-rf="zone"]').value.trim(),
+      stars: Number(card.querySelector('[data-rf="stars"]').value) || 5,
+      text_fr: card.querySelector('[data-rf="text_fr"]').value.trim(),
+      text_ar: card.querySelector('[data-rf="text_ar"]').value.trim(),
+    })).filter(r => r.name || r.text_fr || r.text_ar);
+    DB.Admin.table('settings')
+      .update({ value: reviews, updated_at: new Date().toISOString() })
+      .eq('key', 'reviews')
+      .then(() => refresh())
+      .catch(err => alert(err.message));
+  }
+});
+
 /* ---------- categories ---------- */
 function tabCategories() {
   return `<div class="card-panel">
@@ -278,6 +341,7 @@ function tabSettings() {
     + card('Promotion globale', `
       <label class="radio-card" style="margin-bottom:10px"><input type="checkbox" id="s-promo-on" ${promo.active ? 'checked' : ''}> Solde active sur tout le magasin</label>
       <div class="field-s"><label>Remise (%)</label><input id="s-promo-pct" type="number" min="0" max="90" value="${promo.percent ?? 0}"></div>
+      <div class="field-s"><label>Se termine le (compte à rebours sur le site)</label><input id="s-promo-end" type="datetime-local" value="${esc((promo.ends || '').slice(0, 16))}"></div>
       <div class="field-s"><label>Livraison gratuite à partir de (DA)</label><input id="s-free" type="number" min="0" placeholder="vide = jamais" value="${freeFrom == null ? '' : freeFrom}"></div>`)
 
     + card('Image d\'accueil (héros)', `
@@ -356,6 +420,7 @@ async function saveSettings() {
     value: {
       active: document.getElementById('s-promo-on').checked,
       percent: Number(document.getElementById('s-promo-pct').value) || 0,
+      ends: document.getElementById('s-promo-end').value || '',
     },
   }).eq('key', 'promo');
   const freeRaw = document.getElementById('s-free').value;
@@ -370,7 +435,7 @@ async function tabPromos() {
   return `<div class="card-panel">
     <h2 style="display:flex;justify-content:space-between;align-items:center">
       Codes promo <button class="btn small accent" data-new-code>+ Nouveau code</button></h2>
-    <table class="tbl"><thead><tr><th>Code</th><th>%</th><th>Min. commande</th><th>État</th><th></th></tr></thead><tbody>
+    <div class="tbl-scroll"><table class="tbl"><thead><tr><th>Code</th><th>%</th><th>Min. commande</th><th>État</th><th></th></tr></thead><tbody>
     ${PROMO_CODES.map(c => `
       <tr>
         <td><b>${esc(c.code)}</b></td><td>−${c.percent}%</td>
@@ -380,7 +445,7 @@ async function tabPromos() {
           <button class="icon-btn danger" data-del-code="${c.id}">Supprimer</button>
         </div></td>
       </tr>`).join('') || '<tr><td colspan="5" style="color:var(--ink-soft)">Aucun code.</td></tr>'}
-    </tbody></table></div>`;
+    </tbody></table></div></div>`;
 }
 
 function promoModal() {

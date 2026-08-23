@@ -112,7 +112,7 @@ document.addEventListener('click', async e => {
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
-  renderChrome('shop');
+  renderChrome('cart');
   try {
     const s = await DB.getSettings();
     FREE_FROM = Number(s.free_delivery_from) || 0;
