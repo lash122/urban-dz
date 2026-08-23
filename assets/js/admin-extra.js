@@ -29,6 +29,8 @@ function tabProducts() {
 function productModal(p = {}) {
   const el = document.createElement('div');
   el.className = 'modal-bg';
+  // photo manager state: array of URL strings and/or File objects
+  const photos = (p.photos || []).filter(Boolean).slice();
   el.innerHTML = `<div class="modal">
     <h2 style="margin-bottom:16px">${p.id ? `Modifier #${p.id}` : 'Nouveau produit'}</h2>
     <div class="form-grid">
@@ -46,9 +48,20 @@ function productModal(p = {}) {
       </select>
       <input id="p-sizes" class="full" placeholder="Tailles (S,M,L,XL)" value="${(p.sizes || []).join(',')}">
       <input id="p-colors" class="full" placeholder="Couleurs (Noir,Blanc,Kaki)" value="${(p.colors || []).join(',')}">
-      <textarea id="p-photo-list" class="full" rows="3"
-        placeholder="URLs photos (une par ligne)">${(p.photos || []).filter(Boolean).join('\n')}</textarea>
-      <input id="p-file" type="file" accept="image/*" class="full">
+    </div>
+
+    <label class="opt-label" style="margin-top:14px">Photos (la première est la photo principale)</label>
+    <div class="thumb-strip" id="p-thumbs"></div>
+    <div class="row-actions" style="margin-top:8px;align-items:center">
+      <label class="icon-btn" style="cursor:pointer">＋ Fichiers
+        <input id="p-file" type="file" accept="image/*" multiple hidden>
+      </label>
+      <input id="p-url-add" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:var(--bg)"
+        placeholder="…ou coller une URL puis +">
+      <button type="button" class="icon-btn" id="p-url-btn">+</button>
+    </div>
+
+    <div class="form-grid" style="margin-top:14px">
       <label class="radio-card"><input type="checkbox" id="p-active" ${p.active !== false ? 'checked' : ''}> Actif (visible)</label>
       <label class="radio-card"><input type="checkbox" id="p-feat" ${p.featured ? 'checked' : ''}> ★ Sélection</label>
     </div>
@@ -58,14 +71,45 @@ function productModal(p = {}) {
       <button class="icon-btn" id="p-close">Fermer</button>
     </div></div>`;
   document.body.appendChild(el);
+  const thumbs = el.querySelector('#p-thumbs');
+
+  function renderThumbs() {
+    thumbs.innerHTML = photos.length ? '' : '<span style="color:var(--ink-soft);font-size:.82rem">Aucune photo — un visuel généré sera affiché.</span>';
+    photos.forEach((entry, i) => {
+      const src = typeof entry === 'string' ? entry : URL.createObjectURL(entry);
+      const item = document.createElement('span');
+      item.className = 'thumb-item';
+      item.innerHTML = `<img src="${esc(src)}" alt=""><button type="button" title="Retirer">✕</button>`;
+      item.querySelector('button').onclick = () => { photos.splice(i, 1); renderThumbs(); };
+      thumbs.appendChild(item);
+    });
+  }
+  renderThumbs();
+
+  el.querySelector('#p-file').addEventListener('change', e => {
+    [...e.target.files].forEach(f => photos.push(f));
+    e.target.value = '';
+    renderThumbs();
+  });
+  el.querySelector('#p-url-btn').onclick = () => {
+    const input = el.querySelector('#p-url-add');
+    const url = input.value.trim();
+    if (!url) return;
+    photos.push(url); input.value = ''; renderThumbs();
+  };
   el.querySelector('#p-close').onclick = () => el.remove();
   el.addEventListener('click', e => { if (e.target === el) el.remove(); });
+
   el.querySelector('#p-save').onclick = async () => {
+    const btn = el.querySelector('#p-save');
     try {
-      let photos = el.querySelector('#p-photo-list').value.split('\n').map(s => s.trim()).filter(Boolean);
-      const file = el.querySelector('#p-file').files[0];
-      if (file) photos.unshift(await DB.Admin.uploadPhoto(file));
-      if (!photos.length) photos = [''];
+      btn.disabled = true;
+      btn.textContent = 'Enregistrement…';
+      const uploaded = [];
+      for (const entry of photos) {
+        uploaded.push(typeof entry === 'string' ? entry : await DB.Admin.uploadPhoto(entry));
+      }
+      if (!uploaded.length) uploaded.push('');
       const row = {
         name_fr: el.querySelector('#p-fr').value.trim(),
         name_ar: el.querySelector('#p-ar').value.trim(),
@@ -77,14 +121,18 @@ function productModal(p = {}) {
         category_id: Number(el.querySelector('#p-cat').value) || null,
         sizes: el.querySelector('#p-sizes').value.split(',').map(s => s.trim()).filter(Boolean),
         colors: el.querySelector('#p-colors').value.split(',').map(s => s.trim()).filter(Boolean),
-        photos, active: el.querySelector('#p-active').checked,
+        photos: uploaded, active: el.querySelector('#p-active').checked,
         featured: el.querySelector('#p-feat').checked,
       };
       if (!row.name_fr && !row.name_ar) throw new Error('Nom requis');
       if (p.id) await DB.Admin.table('products').update(row).eq('id', p.id);
       else await DB.Admin.table('products').insert(row);
       el.remove(); refresh();
-    } catch (e) { el.querySelector('#p-err').textContent = e.message; }
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = 'Enregistrer';
+      el.querySelector('#p-err').textContent = e.message;
+    }
   };
 }
 
@@ -106,29 +154,51 @@ function tabCategories() {
 function categoryModal(c = {}) {
   const el = document.createElement('div');
   el.className = 'modal-bg';
+  let catFile = null;
   el.innerHTML = `<div class="modal"><h2 style="margin-bottom:14px">${c.id ? 'Modifier' : 'Nouvelle catégorie'}</h2>
     <div class="form-grid">
       <input id="c-fr" placeholder="Nom (FR)" value="${esc(c.name_fr || '')}">
       <input id="c-ar" placeholder="الاسم (AR)" value="${esc(c.name_ar || '')}">
       <input id="c-sort" type="number" placeholder="Ordre" value="${c.sort ?? 0}">
-      <input id="c-img" placeholder="URL photo (optionnel)" value="${esc(c.image || '')}">
+      <span></span>
     </div>
+    <label class="opt-label" style="margin-top:10px">Photo de la tuile</label>
+    ${c.image ? `<img src="${esc(c.image)}" alt="" style="width:110px;border-radius:8px;margin-bottom:8px">` : ''}
+    <div class="row-actions" style="align-items:center">
+      <label class="icon-btn" style="cursor:pointer">＋ Fichier
+        <input id="c-file" type="file" accept="image/*" hidden>
+      </label>
+      <input id="c-img" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:var(--bg)"
+        placeholder="…ou URL photo" value="${esc(c.image || '')}">
+    </div>
+    <p class="login-err" id="c-err"></p>
     <div class="row-actions" style="margin-top:14px">
       <button class="btn small accent" id="c-save">Enregistrer</button>
       <button class="icon-btn" id="c-close">Fermer</button>
     </div></div>`;
   document.body.appendChild(el);
   el.addEventListener('click', e => { if (e.target === el || e.target.id === 'c-close') el.remove(); });
+  el.querySelector('#c-file').addEventListener('change', e => { catFile = e.target.files[0] || null; });
+
   el.querySelector('#c-save').onclick = async () => {
-    const row = {
-      name_fr: el.querySelector('#c-fr').value.trim() || '—',
-      name_ar: el.querySelector('#c-ar').value.trim() || '—',
-      sort: Number(el.querySelector('#c-sort').value) || 0,
-      image: el.querySelector('#c-img').value.trim(),
-    };
-    if (c.id) await DB.Admin.table('categories').update(row).eq('id', c.id);
-    else await DB.Admin.table('categories').insert(row);
-    el.remove(); refresh();
+    const btn = el.querySelector('#c-save');
+    try {
+      btn.disabled = true; btn.textContent = 'Enregistrement…';
+      let image = el.querySelector('#c-img').value.trim();
+      if (catFile) image = await DB.Admin.uploadPhoto(catFile);
+      const row = {
+        name_fr: el.querySelector('#c-fr').value.trim() || '—',
+        name_ar: el.querySelector('#c-ar').value.trim() || '—',
+        sort: Number(el.querySelector('#c-sort').value) || 0,
+        image,
+      };
+      if (c.id) await DB.Admin.table('categories').update(row).eq('id', c.id);
+      else await DB.Admin.table('categories').insert(row);
+      el.remove(); refresh();
+    } catch (e) {
+      btn.disabled = false; btn.textContent = 'Enregistrer';
+      el.querySelector('#c-err').textContent = e.message;
+    }
   };
 }
 
@@ -200,10 +270,13 @@ function tabSettings() {
 
     <h2 style="margin-top:24px">Image d'accueil (héros)</h2>
     <div class="form-grid">
-      <input id="s-hero" class="full" placeholder="URL de l'image (vide = visuel généré)"
+      <label class="icon-btn" style="cursor:pointer;justify-self:start">＋ Fichier
+        <input id="s-hero-file" type="file" accept="image/*" hidden>
+      </label>
+      <input id="s-hero" placeholder="…ou URL de l'image (vide = visuel généré)"
         value="${esc(typeof CACHE.settings.hero === 'string' ? CACHE.settings.hero : '')}">
       ${CACHE.settings.hero
-        ? `<img src="${esc(CACHE.settings.hero)}" alt="" style="width:120px;border-radius:8px;grid-column:1/-1">` : ''}
+        ? `<img src="${esc(CACHE.settings.hero)}" alt="" id="s-hero-preview" style="width:120px;border-radius:8px;grid-column:1/-1">` : ''}
     </div>
 
     <h2 style="margin-top:24px">Pixels publicitaires</h2>
@@ -237,6 +310,10 @@ async function saveSettings() {
     },
   }).eq('key', 'store');
   await T('settings').update({ value: document.getElementById('s-hero').value.trim() }).eq('key', 'hero');
+  const heroFile = document.getElementById('s-hero-file').files[0];
+  if (heroFile) {
+    await T('settings').update({ value: await DB.Admin.uploadPhoto(heroFile) }).eq('key', 'hero');
+  }
   await T('settings').update({
     value: document.getElementById('s-wa').value.replace(/\D/g, ''),
   }).eq('key', 'whatsapp');

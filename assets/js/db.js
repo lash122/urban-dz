@@ -274,9 +274,35 @@ const DB = (() => {
       return count === 1;
     },
     table(name) { return client.from(name); },
+
+    /* Shrink a photo in the browser before uploading: long edge ≤ maxDim,
+       re-encoded JPEG. Big difference on mobile data — and Storage bills
+       egress. Falls back to the original file when smaller/better as-is. */
+    async compressImage(file, maxDim = 1400, quality = 0.82) {
+      try {
+        if (!file.type.startsWith('image/') || file.type === 'image/gif') return file;
+        const img = await new Promise((res, rej) => {
+          const url = URL.createObjectURL(file);
+          const i = new Image();
+          i.onload = () => { URL.revokeObjectURL(url); res(i); };
+          i.onerror = () => { URL.revokeObjectURL(url); rej(new Error('bad image')); };
+          i.src = url;
+        });
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
+        if (!blob || blob.size >= file.size) return file;
+        return new File([blob], String(file.name).replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' });
+      } catch { return file; }
+    },
+
     async uploadPhoto(file) {
-      const path = `p-${Date.now()}-${file.name.replace(/[^\w.-]/g, '_')}`;
-      const { error } = await client.storage.from('products').upload(path, file);
+      const compressed = await this.compressImage(file);
+      const path = `p-${Date.now()}-${String(compressed.name).replace(/[^\w.-]/g, '_')}`;
+      const { error } = await client.storage.from('products').upload(path, compressed);
       if (error) throw error;
       return client.storage.from('products').getPublicUrl(path).data.publicUrl;
     },
