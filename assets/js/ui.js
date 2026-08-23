@@ -34,14 +34,49 @@ const COLOR_AR = {
   'Noir': 'أسود', 'Blanc': 'أبيض', 'Bleu': 'أزرق', 'Marine': 'كحلي', 'Kaki': 'خاكي',
   'Gris': 'رمادي', 'Beige': 'بيج', 'Taupe': 'رمادي فاتح', 'Vert': 'أخضر', 'Bordeaux': 'بوردو',
 };
+/* known names (FR + EN, case-insensitive) -> exact hex; any other name gets
+   a stable unique hue derived from the name itself, so two DIFFERENT colors
+   can never render as the same swatch. */
 const COLOR_HEX = {
-  'Noir': '#1c1a17', 'Blanc': '#f7f4ee', 'Bleu': '#2b5ea7', 'Marine': '#22304d',
-  'Kaki': '#8a815c', 'Gris': '#9a958d', 'Beige': '#d9c7a7', 'Taupe': '#a89a86',
-  'Vert': '#4e6b4e', 'Bordeaux': '#6e2b35', 'Rouge': '#b3402e', 'Rose': '#d98ca0',
-  'Marron': '#5c4632', 'Orange': '#d97b29', 'Jaune': '#d9b23a', 'Violet': '#6a4ba1',
+  'noir': '#1c1a17', 'black': '#1c1a17',
+  'blanc': '#f7f4ee', 'white': '#f7f4ee',
+  'bleu': '#2b5ea7', 'blue': '#2b5ea7',
+  'bleu ciel': '#7fb2e5', 'sky blue': '#7fb2e5',
+  'bleu fonce': '#1e3a6e', 'royal': '#2b4bd7',
+  'marine': '#22304d', 'navy': '#22304d',
+  'kaki': '#8a815c', 'khaki': '#8a815c',
+  'gris': '#9a958d', 'gray': '#9a958d', 'grey': '#9a958d',
+  'gris fonce': '#5a564f', 'charbon': '#33302b', 'charcoal': '#33302b',
+  'beige': '#d9c7a7', 'sable': '#cbb289', 'sand': '#cbb289',
+  'taupe': '#a89a86',
+  'vert': '#4e6b4e', 'green': '#4e6b4e',
+  'vert olive': '#6b7042', 'olive': '#6b7042',
+  'bordeaux': '#6e2b35', 'burgundy': '#6e2b35',
+  'rouge': '#b3402e', 'red': '#b3402e',
+  'rose': '#d98ca0', 'pink': '#d98ca0',
+  'marron': '#5c4632', 'brown': '#5c4632', 'brun': '#5c4632',
+  'orange': '#d97b29',
+  'jaune': '#d9b23a', 'yellow': '#d9b23a',
+  'violet': '#6a4ba1', 'purple': '#6a4ba1',
+  'creme': '#f0e6cf', 'cream': '#f0e6cf',
+  'dore': '#c9a84c', 'gold': '#c9a84c',
+  'argent': '#c0c0c0', 'silver': '#c0c0c0',
+  'denim': '#33517a', 'camel': '#b08d57',
+  'menthe': '#8fc7a5', 'mint': '#8fc7a5',
 };
+
+function _nameHue(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
+  return h;
+}
+
 function colorName(c) { return LANG === 'ar' ? (COLOR_AR[c] || c) : c; }
-function colorHex(c) { return COLOR_HEX[c] || '#b8b0a4'; }
+function colorHex(c) {
+  const key = String(c || '').toLowerCase().trim();
+  if (COLOR_HEX[key]) return COLOR_HEX[key];
+  return `hsl(${_nameHue(key)}, 34%, 60%)`;
+}
 function colorDot(c) {
   return `<span class="dot-swatch" style="background:${colorHex(c)}" aria-hidden="true"></span>`;
 }
