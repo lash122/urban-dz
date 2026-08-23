@@ -18,9 +18,12 @@ function tabProducts() {
       </div></td>
     </tr>`).join('');
   return `<div class="card-panel">
-    <h2 style="display:flex;justify-content:space-between;align-items:center">
-      Produits (${CACHE.products.length})
-      <button class="btn small accent" data-new-product>+ Nouveau produit</button></h2>
+    <h2 style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <span>Produits (${CACHE.products.length})</span>
+      <span class="row-actions">
+        <button class="icon-btn" data-bulk>⬆ Importer en lot</button>
+        <button class="btn small accent" data-new-product>+ Nouveau produit</button>
+      </span></h2>
     <table class="tbl"><thead><tr>
       <th></th><th>Nom</th><th>Prix</th><th>Stock</th><th>Catégorie</th><th>État</th><th></th>
     </tr></thead><tbody>${rows}</tbody></table></div>`;
@@ -420,10 +423,79 @@ function promoModal() {
 }
 
 /* ---------- global click delegation ---------- */
+/* ---------- bulk import (P10): one product per line ---------- */
+function bulkModal() {
+  const el = document.createElement('div');
+  el.className = 'modal-bg';
+  el.innerHTML = `<div class="modal">
+    <h2 style="margin-bottom:10px">Importation en lot</h2>
+    <p style="color:var(--ink-soft);font-size:.85rem;margin-bottom:12px">
+      Un produit par ligne, champs séparés par <b>|</b> :<br>
+      <code style="background:#f0ebe3;padding:2px 6px;border-radius:6px">Nom FR | Nom AR | Prix | Ancien prix (vide si aucun) | Stock</code><br>
+      Exemple : <code style="background:#f0ebe3;padding:2px 6px;border-radius:6px">T-shirt Noir | تيشيرت أسود | 2200 | 2800 | 30</code></p>
+    <select id="b-cat" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:9px;background:var(--bg);margin-bottom:12px">
+      <option value="">— Catégorie commune à tous —</option>
+      ${CACHE.categories.map(c => `<option value="${c.id}">${esc(c.name_fr)}</option>`).join('')}
+    </select>
+    <textarea id="b-lines" rows="10" class="full"
+      placeholder="T-shirt Noir | تيشيرت أسود | 2200 | 2800 | 30&#10;Jean Bleu | جينز أزرق | 4500 | | 15"></textarea>
+    <p class="login-err" id="b-msg"></p>
+    <div class="row-actions" style="margin-top:14px">
+      <button class="btn small accent" id="b-import">Importer</button>
+      <button class="icon-btn" id="b-close">Fermer</button>
+    </div></div>`;
+  document.body.appendChild(el);
+  el.addEventListener('click', e => { if (e.target === el || e.target.id === 'b-close') el.remove(); });
+
+  el.querySelector('#b-import').onclick = async () => {
+    const msg = el.querySelector('#b-msg');
+    const btn = el.querySelector('#b-import');
+    const lines = el.querySelector('#b-lines').value.split('\n').map(l => l.trim()).filter(Boolean);
+    if (!lines.length) { msg.textContent = 'Aucune ligne à importer.'; return; }
+    btn.disabled = true;
+    let ok = 0; const errors = [];
+    for (const [i, line] of lines.entries()) {
+      const [fr = '', ar = '', price = '', compare = '', stock = ''] =
+        line.split('|').map(x => x.trim());
+      if (!fr && !ar) { errors.push(`Ligne ${i + 1} : nom manquant`); continue; }
+      if (!(parseFloat(price) >= 0) || price === '') { errors.push(`Ligne ${i + 1} : prix invalide`); continue; }
+      try {
+        await DB.Admin.table('products').insert({
+          name_fr: fr || ar,
+          name_ar: ar || fr,
+          description_fr: '', description_ar: '',
+          price: parseFloat(price),
+          compare_at_price: parseFloat(compare) > 0 ? parseFloat(compare) : null,
+          stock: parseInt(stock) >= 0 ? parseInt(stock) : 0,
+          category_id: Number(el.querySelector('#b-cat').value) || null,
+          sizes: ['S', 'M', 'L', 'XL', 'XXL'],
+          colors: [],
+          photos: [''],
+          active: true, featured: false,
+        });
+        ok++;
+      } catch (e) {
+        errors.push(`Ligne ${i + 1} : ${e.message}`);
+      }
+    }
+    btn.disabled = false;
+    if (ok) {
+      msg.style.color = 'var(--ok)';
+      msg.textContent = `${ok} produit(s) importé(s).` +
+        (errors.length ? ` Erreurs : ${errors.join(' · ')}` : '');
+      setTimeout(() => { el.remove(); refresh(); }, ok && !errors.length ? 800 : 2500);
+    } else {
+      msg.style.color = '';
+      msg.textContent = errors.join(' · ') || 'Rien importé.';
+    }
+  };
+}
+
 document.addEventListener('click', async e => {
   const q = s => e.target.closest(s);
   let m;
   if (q('#csv-btn')) exportOrdersCsv();
+  else if (q('[data-bulk]')) bulkModal();
   else if ((m = q('[data-view]'))) orderModal(CACHE.orders.find(o => o.id == m.dataset.view));
   else if ((m = q('[data-advance]'))) setStatus(+m.dataset.advance, m.dataset.next);
   else if ((m = q('[data-cancel]')))
