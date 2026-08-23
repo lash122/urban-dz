@@ -178,6 +178,9 @@ function renderHeader(active) {
       </a>
     </div>
   </div>`;
+  const burger = el.querySelector('.nav-burger');
+  if (burger) burger.addEventListener('click', () =>
+    el.querySelector('.nav-links').classList.toggle('open'));
 }
 
 function renderFooter() {

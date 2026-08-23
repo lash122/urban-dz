@@ -470,26 +470,89 @@ footer { border-top: 1px solid var(--line); margin-top: 70px; background: var(--
 .footer-grid a:hover { color: var(--ink); }
 .footer-bottom { border-top: 1px solid var(--line); padding-block: 16px; font-size: .8rem; color: var(--ink-soft); }
 
-/* ---------- responsive ---------- */
+/* ---------- touch devices: no hover, so reveal what was hover-only ---------- */
+@media (hover: none) {
+  .card-quick { opacity: 1; transform: none; font-size: .78rem; padding: 8px; }
+  .wish-btn { opacity: 1; width: 32px; height: 32px; font-size: .95rem; }
+}
+
+/* ---------- tablet ---------- */
 @media (max-width: 900px) {
-  .hero-inner, .pdp, .cart-layout, .co-layout { grid-template-columns: 1fr; }
+  .hero-inner, .pdp, .cart-layout, .co-layout { grid-template-columns: 1fr; gap: 28px; }
   .shop-layout { grid-template-columns: 1fr; }
-  .filters { position: static; order: 2; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  /* categories become a horizontal scrollable chip bar ABOVE the products */
+  .shop-layout { display: flex; flex-direction: column; }
+  .filters {
+    position: static; order: -1; display: block;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 14px 16px;
+  }
+  .filters h4 { margin-bottom: 8px; }
+  .filter-list { display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+  .filter-list li { flex-shrink: 0; }
+  .filter-list a {
+    border: 1px solid var(--line); border-radius: 999px;
+    white-space: nowrap; background: var(--bg); padding: 7px 14px;
+  }
+
   .footer-grid { grid-template-columns: 1fr 1fr; }
   .summary-card { position: static; }
 }
+
+/* ---------- phone ---------- */
 @media (max-width: 640px) {
+  :root { --radius: 12px; }
+
+  /* navigation */
+  header.site-header { position: relative; }
   .nav-links {
     display: none; position: absolute; top: 100%; inset-inline: 0;
     background: var(--surface); border-bottom: 1px solid var(--line);
     flex-direction: column; gap: 0; padding: 8px 0; z-index: 40;
+    box-shadow: 0 14px 24px rgba(28,26,23,.08);
   }
   .nav-links.open { display: flex; }
-  .nav-links a { padding: 12px 24px; border-bottom: none; }
+  .nav-links a { padding: 13px 24px; border-bottom: none; font-size: 1rem; }
   .nav-burger { display: block; }
-  header.site-header { position: relative; }
+  .header-inner { gap: 14px; padding-block: 14px; }
+
+  /* hero */
+  .hero-inner { grid-template-columns: 1fr; padding-block: 44px 52px; gap: 30px; }
+  .hero-art { max-width: 420px; margin-inline: auto; width: 100%; }
+
+  /* spacing */
+  .section { padding-block: 52px; }
+  .page-head { padding-block: 28px 6px; }
+
+  /* strict 2-column product & category grids */
+  .grid-products { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .cat-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .upsell-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .card-body { padding-top: 9px; }
+  .card-body h3 { font-size: .84rem; line-height: 1.35; }
+  .price-now { font-size: .88rem; }
+  .price-old, .badge-sale { font-size: .74rem; }
+
+  /* usp strip stacks */
+  .usp-inner { grid-template-columns: 1fr; gap: 6px; padding-block: 14px; }
+  .usp-item { justify-content: flex-start; }
+
+  /* forms */
   .field-row, .radio-cards { grid-template-columns: 1fr; }
-  .filters { grid-template-columns: 1fr; }
-  .usp-inner { grid-template-columns: 1fr; gap: 4px; }
-  .footer-grid { grid-template-columns: 1fr; }
+  .panel { padding: 18px; }
+  .summary-card { padding: 18px; }
+
+  /* cart lines: compact two-row layout */
+  .cart-line { grid-template-columns: 68px 1fr; row-gap: 10px; }
+  .cart-line img { width: 68px; height: 68px; }
+  .qty-stepper button { height: 34px; }
+  .line-end { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; }
+
+  /* footer */
+  .footer-grid { grid-template-columns: 1fr; gap: 22px; padding-block: 32px; }
+  .editorial-inner { padding-block: 60px; }
+
+  /* success box breathing room */
+  .success-box { margin: 40px auto; padding-inline: 10px; }
 }
