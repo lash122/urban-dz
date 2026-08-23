@@ -1,0 +1,28 @@
+# Netlify — static site, no build step needed
+[build]
+  publish = "."
+
+# Pretty URLs: /shop, /cart… serve the .html files
+[[redirects]]
+  from = "/shop"
+  to = "/shop.html"
+  status = 200
+
+[[redirects]]
+  from = "/track"
+  to = "/track.html"
+  status = 200
+
+[[redirects]]
+  from = "/faq"
+  to = "/faq.html"
+  status = 200
+
+# Security headers (the anon key is public by design — the real security
+# lives in supabase/schema.sql RLS policies)
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
