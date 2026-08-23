@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /admin.html
 
-Sitemap: https://YOUR-DOMAIN.com/sitemap.xml
+Sitemap: https://taupe-belekoy-816519.netlify.app/sitemap.xml
